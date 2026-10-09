@@ -1,0 +1,145 @@
+<!doctype html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#050505;color:#f5f5f5;font-family:Arial,sans-serif}
+body{min-height:100vh}
+.wrap{max-width:680px;margin:auto;padding:20px 14px 42px}
+.brand{color:#ef727a;font-size:11px;font-weight:900;letter-spacing:4px;text-align:center}
+h1{font-size:29px;line-height:1;margin:7px 0 4px;text-align:center;letter-spacing:-.6px}
+.sub{color:#777;font-size:12px;text-align:center;margin-bottom:18px}
+
+.profile{
+ background:#111;
+ border:1px solid #242424;
+ border-radius:30px;
+ padding:18px;
+ display:flex;
+ align-items:center;
+ gap:14px;
+ margin-bottom:14px;
+ box-shadow:0 10px 30px rgba(0,0,0,.28);
+}
+.avatar{
+ width:70px;height:70px;flex:0 0 70px;border-radius:50%;
+ object-fit:cover;background:#000;border:2px solid #2b2b2b;
+}
+.profile-main{min-width:0;flex:1}
+.profile-name{font-size:18px;font-weight:900}
+.profile-desc{font-size:11px;color:#777;margin-top:4px}
+.profile-status{
+ display:inline-flex;align-items:center;gap:6px;margin-top:9px;
+ background:#1a1a1a;border:1px solid #292929;border-radius:999px;
+ padding:7px 11px;color:#aaa;font-size:10px;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:#e56b73}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{
+ background:#101010;border:1px solid #222;border-radius:24px;
+ padding:15px;text-align:center;
+}
+.stat b{display:block;font-size:20px}.stat span{font-size:9px;color:#666;letter-spacing:1px}
+
+.toolbar{display:flex;gap:8px;margin-bottom:12px}
+.search{
+ flex:1;min-width:0;background:#101010;border:1px solid #292929;
+ color:#fff;padding:13px 17px;border-radius:999px;outline:0;
+}
+.search:focus{border-color:#e56b73}
+button{
+ border:0;border-radius:999px;padding:13px 18px;
+ background:#e56b73;color:#090909;font-weight:900;
+}
+.secondary{background:#181818;color:#ddd;border:1px solid #292929}
+
+.card{
+ background:#101010;border:1px solid #222;border-radius:25px;
+ padding:14px;margin:8px 0;
+ box-shadow:0 5px 18px rgba(0,0,0,.18);
+}
+.key{font-size:13px;font-weight:800;margin-bottom:7px}
+.meta{font-size:9px;color:#666;margin-bottom:9px}
+select{
+ width:100%;background:#090909;color:#eee;border:1px solid #292929;
+ border-radius:999px;padding:13px 16px;font-size:14px;outline:0;
+ appearance:auto;
+}
+select:focus{border-color:#e56b73}
+
+.bottom{
+ position:sticky;bottom:9px;background:rgba(10,10,10,.96);
+ border:1px solid #252525;padding:11px;border-radius:28px;
+ margin-top:15px;box-shadow:0 12px 30px rgba(0,0,0,.45);
+}
+.apply{width:100%;font-size:15px;padding:15px}
+.status{text-align:center;color:#777;font-size:11px;margin-top:9px;min-height:16px}
+.bar{height:6px;background:#222;border-radius:999px;overflow:hidden;margin-top:8px;display:none}
+.fill{height:100%;width:0;background:#e56b73;border-radius:999px}
+
+@media(max-width:430px){
+ .wrap{padding:16px 11px 35px}
+ .profile{border-radius:27px;padding:15px}
+ .avatar{width:62px;height:62px;flex-basis:62px}
+ h1{font-size:27px}
+}
+</style></head><body><div class="wrap">
+<div class="brand">DOCTRINE</div>
+<h1>TOUCH CONTROL</h1>
+<div class="sub">Performance settings dashboard</div>
+
+<div class="profile">
+  <img class="avatar" src="doctrine_logo.png" alt="Doctrine">
+  <div class="profile-main">
+    <div class="profile-name">DOCTRINE</div>
+    <div class="profile-desc">Touch &amp; input configuration</div>
+    <div class="profile-status"><span class="dot"></span><span id="profileStatus">CHECKING SHIZUKU</span></div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><b id="settingCount">96</b><span>SETTINGS</span></div>
+  <div class="stat"><b>3</b><span>NAMESPACES</span></div>
+</div>
+
+<div class="toolbar"><input class="search" id="search" placeholder="Search setting..."><button class="secondary" onclick="resetAll()">RESET</button></div>
+<div id="list"></div>
+<div class="bottom"><button class="apply" onclick="applyAll()">APPLY ALL SETTINGS</button>
+<div class="bar" id="bar"><div class="fill" id="fill"></div></div><div class="status" id="status">Waiting for Shizuku</div></div>
+</div>
+<script>
+let original=[],items=[],presetNums=["0","1","2","3","4","5","6","8","10","12","15","20","30","40","50","60","80","85","90","100","120","150","160","180","185","200","250","300","500","1000"];
+const special=["high","low","medium","amplitude","diameter","touchScreen"];
+async function init(){original=await fetch('settings.json').then(r=>r.json());items=original.map(x=>({...x,value:x.default}));render();status();}
+function optionsFor(x){
+ let vals=[x.default];
+ if(!/^-?\d+(\.\d+)?$/.test(x.default)) vals.push(...special);
+ else vals.push(...presetNums);
+ return [...new Set(vals)];
+}
+function esc(s){return String(s).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;')}
+function render(){
+ let q=document.getElementById('search').value.toLowerCase(),list=document.getElementById('list');list.innerHTML='';
+ let shown=items.filter(x=>x.key.toLowerCase().includes(q));
+ document.getElementById('count').textContent=items.length+" SETTINGS • SELECT VALUE";
+ shown.forEach(x=>{
+  let c=document.createElement('div');c.className='card';
+  let opts=optionsFor(x).map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');
+  c.innerHTML='<div class="key">'+esc(x.key)+'</div><div class="meta">system • global • secure</div><select>'+opts+'</select>';
+  let sel=c.querySelector('select');sel.value=x.value;
+  sel.onchange=()=>{x.value=sel.value};list.appendChild(c);
+ });
+}
+function resetAll(){items=original.map(x=>({...x,value:x.default}));render();document.getElementById('status').textContent="Values reset"}
+function status(){
+ let r=window.Doctrine.getStatus();
+ document.getElementById('status').textContent=r;
+ document.getElementById('profileStatus').textContent=r.toUpperCase();
+}
+function applyAll(){
+ let bar=document.getElementById('bar'),fill=document.getElementById('fill'),s=document.getElementById('status');
+ bar.style.display='block';fill.style.width='0%';let p=0,t=setInterval(()=>{p+=4;fill.style.width=p+'%';
+ if(p>=100){clearInterval(t);let r=window.Doctrine.applyAll(JSON.stringify(items));s.textContent=r;s.style.color=r.includes("SUCCESS")?"#e56b73":"#777"}},25);
+}
+document.getElementById('search').oninput=render;init();
+</script></body></html>
